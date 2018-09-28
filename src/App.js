@@ -1,16 +1,10 @@
 import React from 'react';
 import styled, { injectGlobal } from 'styled-components';
 import GridLines from './components/GridLines';
+import { clamp } from './utils/math';
 
-function clamp(value, min, max) {
-  return Math.min(
-    max,
-    Math.max(
-      min,
-      value,
-    ),
-  );
-}
+const MIN_SCALE = 1;
+const MAX_SCALE = 100;
 
 // eslint-disable-next-line
 injectGlobal`
@@ -33,8 +27,8 @@ const Container = styled.div`
 `;
 
 const Viewport = styled.div`
-  width: 50vw;
-  height: 50vh;
+  width: 77vw;
+  height: 66vh;
   background-color: black;
   overflow: hidden;
 `;
@@ -72,9 +66,6 @@ export default class App extends React.PureComponent {
   }
 
   handleScroll = (event) => {
-    const MIN_SCALE = 1;
-    const MAX_SCALE = 100;
-
     const {
       scale: currentScale,
       translate: {
@@ -94,12 +85,10 @@ export default class App extends React.PureComponent {
       return;
     }
 
-    const newScale = Math.min(
+    const newScale = clamp(
+      currentScale + currentScale * (-event.deltaY / 100),
+      MIN_SCALE,
       MAX_SCALE,
-      Math.max(
-        MIN_SCALE,
-        (currentScale + currentScale * (-event.deltaY / 100)),
-      ),
     );
 
     const deltaScale = newScale - currentScale;
@@ -118,19 +107,15 @@ export default class App extends React.PureComponent {
     const minTranslation = -((newScale - 1) / (newScale * 2));
 
     const translate = {
-      x: Math.min(
-        maxTranslation,
-        Math.max(
-          minTranslation,
-          currentXTranslation + deltaTranslation.x,
-        ),
+      x: clamp(
+        currentXTranslation + deltaTranslation.x, 
+        minTranslation, 
+        maxTranslation
       ),
-      y: Math.min(
-        maxTranslation,
-        Math.max(
-          minTranslation,
-          currentYTranslation + deltaTranslation.y,
-        ),
+      y: clamp(
+        currentYTranslation + deltaTranslation.y, 
+        minTranslation, 
+        maxTranslation
       ),
     };
 
