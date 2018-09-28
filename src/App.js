@@ -2,8 +2,15 @@ import React from 'react';
 import styled, { injectGlobal } from 'styled-components';
 import GridLines from './components/GridLines';
 
-export const WIDTH = 423;
-export const HEIGHT = 534;
+function clamp(value, min, max) {
+  return Math.min(
+    max,
+    Math.max(
+      min,
+      value,
+    ),
+  );
+}
 
 // eslint-disable-next-line
 injectGlobal`
@@ -26,10 +33,8 @@ const Container = styled.div`
 `;
 
 const Viewport = styled.div`
-  /* width: 100vw; */
-  /* height: 100vw; */
-  width: ${WIDTH}px;
-  height: ${HEIGHT}px;
+  width: 50vw;
+  height: 50vh;
   background-color: black;
   overflow: hidden;
 `;
@@ -39,8 +44,8 @@ const SVGContainer = styled.svg.attrs({
     transform: `scale(${scale}) translate(${x * 100}%, ${y * 100}%)`,
   }),
 })`
-  width: ${WIDTH}px;
-  height: ${HEIGHT}px;
+  width: ${props => props.startingWidth}px;
+  height: ${props => props.startingHeight}px;
 `;
 
 export default class App extends React.PureComponent {
@@ -77,6 +82,7 @@ export default class App extends React.PureComponent {
         y: currentYTranslation,
       },
     } = this.state;
+    const { viewportBounds } = this;
 
     const isZoomingOut = event.deltaY > 0;
 
@@ -99,8 +105,8 @@ export default class App extends React.PureComponent {
     const deltaScale = newScale - currentScale;
 
     const mousePos = {
-      x: ((event.clientX - (this.viewportBounds.x)) / WIDTH) * 2 - 1,
-      y: ((event.clientY - (this.viewportBounds.y)) / HEIGHT) * 2 - 1,
+      x: ((event.clientX - (viewportBounds.x)) / viewportBounds.width) * 2 - 1,
+      y: ((event.clientY - (viewportBounds.y)) / viewportBounds.height) * 2 - 1,
     };
 
     const deltaTranslation = {
@@ -134,6 +140,35 @@ export default class App extends React.PureComponent {
     });
   }
 
+  handlePointerMove = (event) => {
+    const { isDragging, translate: { x, y }, scale } = this.state;
+    if (!isDragging) return;
+    const { width, height } = this.viewportBounds;
+    
+    
+    const maxTranslation = (scale - 1) / (scale * 2);
+    const minTranslation = -((scale - 1) / (scale * 2));
+
+    const deltaX = (event.movementX / width) / scale;
+    const deltaY = (event.movementY / height) / scale;
+    
+    this.setState({ 
+      translate: { 
+        x: clamp(x + deltaX, minTranslation, maxTranslation),
+        y: clamp(y + deltaY, minTranslation, maxTranslation),
+      },
+    });
+
+  }
+
+  startDrag = () => {
+    this.setState({ isDragging: true });
+  }
+
+  endDrag = () => {
+    this.setState({ isDragging: false });
+  }
+
   renderVieportContent() {
     if (!this.viewportBounds) return null;
     const { width, height } = this.viewportBounds;
@@ -159,6 +194,10 @@ export default class App extends React.PureComponent {
           innerRef={(element) => {
             this.viewportElement = element;
           }}
+          onPointerMove={this.handlePointerMove}
+          onPointerDown={this.startDrag}
+          onPointerUp={this.endDrag}
+          onPointerLeave={this.endDrag}
         >
           {this.renderVieportContent()}
         </Viewport>
